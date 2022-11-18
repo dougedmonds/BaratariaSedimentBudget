@@ -1,5 +1,6 @@
-#Barataria Basin Sediment Budget Model
-Model that implement the Monte Carlo sampling and solutio of equation 1 in Edmonds et al.
+# Barataria Basin Sediment Budget Model
+
+Model that implements the Monte Carlo sampling and solutio of equation 1 in Edmonds et al.
 
 Barataria_SedimentBudget.m starts a series of 5 Monte Carlo simulations for the different scenarios described in Edmonds et al.
 
