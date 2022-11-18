@@ -7,3 +7,5 @@ Barataria_SedimentBudget.m starts a series of 5 Monte Carlo simulations for the 
 Barataria_SedimentBudget.m calls function BaratariaArea_final.m to calculate how the Barataria's area changes for each set of parameters selected via the Monte Carlo. 
 
 CalculateOverbankDeposition.m ingests the Delft3D output files and calculates the scaled-up yearly mass deposition rate in Barataria. 
+
+Delft3d model results here --> <a href="https://zenodo.org/badge/latestdoi/567822192"><img src="https://zenodo.org/badge/567822192.svg" alt="DOI"></a>
