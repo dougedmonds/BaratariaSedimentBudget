@@ -33,10 +33,10 @@ areaBar = CouvillionTable1.Area_km2;
 areaBar_error = CouvillionTable1.SE_km2; 
 yr = CouvillionTable1.Year;
 load('CouvillionTable3.mat')
-load('Barataria_elevations_gt0_FINAL', 'f_gt0', 'x_gt0') %data from ref. 44 in Edmonds et al. 
+load('Barataria_elevations_gt0_FINAL', 'f_gt0', 'x_gt0') %data from ref. 45 in Edmonds et al. 
 x = x_gt0(2:end); %ecdf duplicates the first point, need to remove for interp1
 f = f_gt0(2:end);
-load('Barataria_elevations_lt0_FINAL', 'lt0') %data from ref. 44 in Edmonds et al. 
+load('Barataria_elevations_lt0_FINAL', 'lt0') %data from ref. 45 in Edmonds et al. 
 z_lt0 = [lt0.grid_code];
 
 %%% Load global mean sea level (GMSL)
@@ -44,16 +44,16 @@ table = readtable('global_basin_timeseries.xlsx', 'Sheet', 'Subtropical North At
 sl = table.ObservedBasin_meanSeaLevel_mean_; %average sea level through time for North Atlantic (mm)
 sl_time = table.Var1; %year of sea level measurement
 p = polyfit(sl_time, sl, 3); %3rd-order polynominal fit to the data
-sl_fit = polyval(p, startYear:endYear)'; %evaluate that polynomial over the simulation time
+sl_fit = polyval(p, startYear:dt:endYear)'; %evaluate that polynomial over the simulation time
 sl_fit_zero1890 = sl_fit - sl_fit(1); %set sea level to zero in 1890
-sl_rise = diff(sl_fit_zero1890); %yearly rate of sea level rise (mm/yr)
+sl_rise = diff(sl_fit_zero1890)./dt; %yearly rate of sea level rise (mm/yr)
 eustatic = sl_rise / 1000; %convert to m/yr
 
 %%% Load Kolker et al. 2011 data (ref. 11)
 load Kolker2011_polyfit %from ref. 11 in Edmonds et al.
-intpYr = 1949:2003; %years for interpolation
-intpsubs = feval(fittedmodel, intpYr)'; %evaulate interpolated data at points specified by intpYr
-intpsubs = intpsubs / 1000; %convert mm/yr to m/yr
+intpYr = 1949:dt:2003; %years for interpolation
+RdpK = feval(fittedmodel, intpYr)'; %evaulate interpolated data at points specified by intpYr
+RdpK = RdpK / 1000; %convert mm/yr to m/yr
 
 %%% initial guess of Monte Carlo Variables
 MinMass_mean = (6.92 / 3083) * 1000000000; %mass of mineral sediment accumulated in Barataria in kg/km2/yr from ref. 13 in Edmonds et al. 
@@ -68,12 +68,12 @@ SS_SE = 0.0079 / (sqrt(274)); %one standard error in m/yr from Table 1 in ref. 1
 d_mean = abs(mean(z_lt0(z_lt0 < -0.2))); %mean water depth in Barataria for all depths less than -0.2. This is done to avoid averaging over the shallow intertidal platform depths since we want marsh height/thickness
 d_std = abs(std(z_lt0(z_lt0 < -0.2))); %standard deviation
 N = length(z_lt0(z_lt0 < -0.2));
-d_SE = d_std / sqrt(N)*300; %standard error of the mean, use 300 to increase error from the otherwise absurbly small value
+d_SE = d_std / sqrt(N)*300; %standard error of the mean, use 300 to increase error from the otherwise small value
 
 [f_ero_mean, f_ero_SE] = f_ero_mean_error(CouvillionTable1, CouvillionTable3,natural_wave_erosion); %calculate fraction of landloss due to edge erosion with error propagation
 
 Aknot = 3200; %guess of the initial Barataria Area, km2
-Aknot_SE = 2*areaBar_error(1); %increase standard error to 95% conf. int with 1.96 multiplier and assume standard error from the first time step measured is good approx for 1890 
+Aknot_SE = 1.96*areaBar_error(1); %increase standard error to 95% conf. int with 1.96 multiplier and assume standard error from the first time step measured is good approx for 1890 
 
 %%% Load initial Guesses for Monte Carlo
 X_mean = [MinMass_mean, OrgMass_mean, SS_mean, d_mean, f_ero_mean, Aknot];
@@ -95,14 +95,14 @@ for k = 1:5
         M_sm(1:end) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr)
         deepsubs = ones(size(eustatic)) .* DS;
     end
-    if k == 3 %dams-only scenario
+    if k == 2 %dams-only scenario
         M_f(1:YrDamBuild/dt) = kg_overbank; %The depositional flux (kg/yr) of overbank sediment flux from the Mississippi River to Barataria Basin from Delft3D
         M_f(YrDamBuild/dt:length(t)) = kg_overbank * postdam_reduction; %effect of dams is to reduce M_f
-        M_sm(1:YrDamBuild/dt) = (PredamSedFlux ); %Predam sediment flux in the Mississippi River (kg/yr) UNITS?
+        M_sm(1:YrDamBuild/dt) = (PredamSedFlux ); %Predam sediment flux in the Mississippi River (kg/yr) 
         M_sm(YrDamBuild/dt:end) = (PostdamSedFlux); %Postdam sediment flux in the Mississippi River (kg/yr)
         deepsubs = ones(size(eustatic)) .* DS;
     end
-    if k == 2 %levees-only scenario
+    if k == 3 %levees-only scenario
         M_f(1:YrLeveeBuild/dt) = kg_overbank; %The depositional flux (kg/yr) of overbank sediment flux from the Mississippi River to Barataria Basin from Delft3D
         M_f(YrLeveeBuild/dt:length(t)) = 0; %after levees are built M_f is 0
         M_sm(1:end) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr)
@@ -111,22 +111,23 @@ for k = 1:5
     if k == 4 %dams and levee scenario
         M_f(1:YrLeveeBuild/dt) = kg_overbank; %The depositional flux (kg/yr) of overbank sediment flux from the Mississippi River to Barataria Basin from Delft3D
         M_f(YrLeveeBuild/dt:length(t)) = 0; %after levees are built M_f is 0
-        M_sm(1:YrDamBuild/dt) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr) UNITS?
+        M_sm(1:YrDamBuild/dt) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr) 
         M_sm(YrDamBuild/dt:end) = (PostdamSedFlux); %Postdam sediment flux in the Mississippi River (kg/yr)
         deepsubs = ones(size(eustatic)) .* DS;
     end
     if k == 5 %resource extraction scenario
         M_f(1:YrLeveeBuild/dt) = kg_overbank; %The depositional flux (kg/yr) of overbank sediment flux from the Mississippi River to Barataria Basin from Delft3D
         M_f(YrLeveeBuild/dt:length(t)) = 0;
-        M_sm(1:YrDamBuild/dt) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr) UNITS?
+        M_sm(1:YrDamBuild/dt) = (PredamSedFlux); %Predam sediment flux in the Mississippi River (kg/yr) 
         M_sm(YrDamBuild/dt:end) = (PostdamSedFlux); %Postdam sediment flux in the Mississippi River (kg/yr)
 
         % resource extraction affects DS, sub in DS values from ref. 11
-        difference = (intpsubs - DS)';
+        difference = (RdpK - DS)';
         difference(difference < 0) = 0;
-        index = intpYr - startYear;
-        deepsubs = ones(size(eustatic)) .* DS;
-        deepsubs(index) = deepsubs(index) + (difference);
+        [r1,c1]=find(t== 1949); %need to change these if changing dt
+        [r2,c2]=find(t== 2003); %need to change these if changing dt
+        deepsubs = ones(size(eustatic)) .* DS; 
+        deepsubs(c1:c2) = deepsubs(c1:c2) + (difference); %this is eq 2a once shallow subsidence is added in
     end
 
      for j = 1:nrecEff %number of recylcing scenarios
@@ -155,13 +156,13 @@ for k = 1:5
         linecolors = [0, 0.6, 0.77; 0.89, 0, 0.23; 0.4940, 0.1840, 0.5560; 0.9290, 0.6940, 0.1250; 0.8500, 0.3250, 0.0980];
         Ahats_mean = mean(Ahats, 2);
         Ahats_SE = std(Ahats') ./ sqrt(cnt);
-        CI95 = tinv([0.025, 0.975], cnt-1);
-        yCI95 = bsxfun(@times, Ahats_SE, CI95(:)); % Calculate 95% Confidence Intervals Of All Experiments At Each Value Of hxa
+        CI99 = tinv([0.025, 0.975], cnt-1);
+        yCI99 = bsxfun(@times, Ahats_SE, CI99(:)); % Calculate 99% Confidence Intervals 
         figure(1)
         hold on
         plot(t, Ahats_mean, 'Color', linecolors(k, :), 'LineWidth', 2)
         %plot(t, Ahats, 'Color', linecolors(k, :), 'LineWidth', 0.25)
-        patch([t, fliplr(t)], [Ahats_mean' + yCI95(1, :), fliplr(Ahats_mean'+yCI95(2, :))], linecolors(k, :), 'FaceAlpha', 0.5, 'EdgeColor', 'none')
+        patch([t, fliplr(t)], [Ahats_mean' + yCI99(1, :), fliplr(Ahats_mean'+yCI99(2, :))], linecolors(k, :), 'FaceAlpha', 0.5, 'EdgeColor', 'none')
         cnt = 0;
         if k == 1
             A_predam = Ahats;
@@ -205,7 +206,7 @@ ax.XAxis.FontSize = 12;
 ax.YAxis.FontSize = 12;
 xlim([startYear endYear])
 ylim([2500 5000])
-yticks([2500 3000 3500 4000 4500 5000 )
+yticks([2500 3000 3500 4000 4500 5000])
 ax.YAxis.MinorTick = 'on';
 ax.XAxis.MinorTick = 'on';
 ylabel('Barataria Area (km^2)')
