@@ -8,7 +8,7 @@ function [A,t,MassFluxes]=BaratariaArea_final(X,x,f,eustatic,M_f,M_sm,deepsubs,n
 %A_ero = rate or marsh area erosion
 %A_rslr= rate of marsh area loss by relative sea level rise
 
-%% inputs
+%%inputs
 MinMass= X(1);   %mass of mineral sediment accumulated in Barataria in kg/km2/yr
 OrgMass= X(2);   %mass of mineral sediment accumulated in Barataria in kg/km2/yr
 SS = X(3);       %mean value of shallow subsidence over the whole delta in m/yr
@@ -16,11 +16,11 @@ d_avg = X(4);    %mean water depth in Barataria (m)
 f_ero = X(5);    %fraction of landloss due to edge erosion (--)
 InitArea = X(6); %Initial area of Barataria (km2)
 
-%% constants
+%%constants
 rhoWet=1150; %density (kg/m3) of sediment eroded from the wetland, from Bomer et al., (2019) as reported in Sanks et al., (2020)
 rhoSurf=290; %density (kg/m3) for freshly deposited surficial sediment, from Sanks et al., (2020)
 
-%% Pre-allocate variables
+%%Pre-allocate variables
 z_n=zeros(length(t)+1,1);
 f_sub=zeros(length(t)+1,1);
 A_ero=zeros(length(t),1);
@@ -51,7 +51,7 @@ if Oc_mass < 0
 else
     f_Oc=(Oc_mass)./PostDamSedFlux; %Equation 7 from Edmonds et al. that gives the retention factor from oceans. 
 end
-%% Solve time-dependent change in area of Barataria Basin
+%%Solve time-dependent change in area of Barataria Basin
 
 A(1,:)=InitArea*1000^2; %Initial area (m2) of Barataria Basin
 R=eustatic+shallowsubs+deepsubs;
