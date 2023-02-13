@@ -21,18 +21,18 @@ rhoWet=1150; %density (kg/m3) of sediment eroded from the wetland, from Bomer et
 rhoSurf=290; %density (kg/m3) for freshly deposited surficial sediment, from Sanks et al., (2020)
 
 %% Pre-allocate variables
-z_n=zeros(nyr+1,1);
-f_sub=zeros(nyr+1,1);
-A_ero=zeros(nyr,1);
-M_or=zeros(nyr,1); 
-M_rec=zeros(nyr,1);
-M_oc=zeros(nyr,1);
-M_e=zeros(nyr,1);
-V_dep=zeros(nyr,1);
-V_rslr=zeros(nyr,1);
-sedBudget=zeros(nyr,1);
-A_rslr=zeros(nyr,1);
-A_new=zeros(nyr,1);
+z_n=zeros(length(t)+1,1);
+f_sub=zeros(length(t)+1,1);
+A_ero=zeros(length(t),1);
+M_or=zeros(length(t),1); 
+M_rec=zeros(length(t),1);
+M_oc=zeros(length(t),1);
+M_e=zeros(length(t),1);
+V_dep=zeros(length(t),1);
+V_rslr=zeros(length(t),1);
+sedBudget=zeros(length(t),1);
+A_rslr=zeros(length(t),1);
+A_new=zeros(length(t),1);
 nRecEff=numel(f_rec);
 A=zeros(length(t),nRecEff);
 shallowsubs=ones(size(eustatic)).*SS;
@@ -42,7 +42,7 @@ OrgFrac=OrgMass/TotMass; %fraction of depositional mass that is organic
 
 %Calculate f_Oc depending on value of f_rec. 
 BaratariaArea_Sanks=3083; %area of barataria when Sanks et al., (2020) reported from their paper
-AvgA=mean(CouvillionTable1.Area_km2(14:20)); %average Barataria area from 2006 to 2015 using Table 1 in Couvillion et al., (2017) (m2/yr)
+AvgA=mean(CouvillionTable1.Area_km2(14:20)); %average Barataria area from 2006 to 2015 using Table 1 in Couvillion et al., (2017) (km2)
 Aero_decade=(f_ero*AvgA)*1000^2; %Area of erosion over the decade of measurement by Sanks et al. (m2/yr) 
 Rec_Mass=f_rec.*(Aero_decade*d_avg*rhoWet); %proportion of land loss that is recylced back onto the marsh surface for different efficiencies (kg/yr)
 Oc_mass=(MinMass*BaratariaArea_Sanks)-Rec_Mass; %mineral mass accumulation in Barataria without recycled component (kg/yr). We consider this to be the offshore mass transported onshore -- so-called ocean mass
@@ -64,21 +64,21 @@ R=eustatic+shallowsubs+deepsubs;
         M_rec(i,1)=f_rec(1).*(M_e(i,1)); %Equation 4 from Edmonds et al.--rate of sediment mass erosion from marsh edges that is recylced back to marsh (kg/yr)
               
         M_oc(i,1)=(M_sm(i)-M_f(i)).*f_Oc(1); %Equation 6 from Edmonds et al., the oceanic contribution to deposition (kg/yr)
-        V_dep(i,1)=(M_f(i)+M_rec(i,1)+M_or(i,1)+M_oc(i,1))*1/rhoSurf; %Equation 9 from Edmonds et al.--volumetric contribution from fluvial overbank deposition (M_f), organic deposition (M_or), marsh edge recylcine (M_r), and ocean derived (M_oc) 
+        V_dep(i,1)=(M_f(i)+M_rec(i,1)+M_or(i,1)+M_oc(i,1))*(1/rhoSurf); %Equation 8 from Edmonds et al.--volumetric rate (m3/yr) of contribution from fluvial overbank deposition (M_f), organic deposition (M_or), marsh edge recylcine (M_r), and ocean derived (M_oc) 
         
-        V_rslr(i,1)=A(i,1)*R(i); %Equation 10 from Edmonds et al.--volume needed to keep up with relative sea level rise (m3)
+        V_rslr(i,1)=A(i,1)*(R(i)); %Equation 9 from Edmonds et al.--volume needed to keep up with relative sea level rise (m3/yr)
 
         sedBudget(i,1)=V_dep(i,1)-V_rslr(i,1); 
            
         if sedBudget(i,1)<0 %sed deficit
-           z_n(i,1)=R(i)-(V_dep(i,1)/A(i,1)) + z_n(i-1,1); %Equation 12 from Edmonds et al.--relative sea level change minus sediment deposition yields increase in R relative to land surface. Add previous timestep to track total increase and land flooded       
+           z_n(i,1)=(R(i)-(V_dep(i,1)/A(i,1)))*dt + z_n(i-1,1); %Equation 11 from Edmonds et al.--relative sea level change minus sediment deposition yields increase in R relative to land surface. Add previous timestep to track total increase and land flooded       
            f_sub(i,1) = interp1(x,f,z_n(i,1),'nearest','extrap'); %get value of proportion of area flooded cdf of elevation (x and f) for that z_n      
-           A_rslr(i,1)=A(i,1)*(f_sub(i,1)-f_sub(i-1,1)); %Equation 13 from Edmonds et al.--land submerged by RSLR (m2)
-           A(i+1,1)=A(i,1)-A_rslr(i,1)*dt-A_ero(i,1)*dt; %next marsh area: land loss by subsidence and erosion      
+           A_rslr(i,1)=A(i,1)*(f_sub(i,1)-f_sub(i-1,1)); %Equation 12 from Edmonds et al.--land submerged by RSLR (m2)
+           A(i+1,1)=A(i,1)-A_rslr(i,1)-A_ero(i,1)*dt; %next marsh area: land loss by subsidence and erosion      
         elseif sedBudget(i,1)>=0 %sed surplus
            z_n(i,1)=0; %no change in relative sea level since sedimentation keeps up
            f_sub(i,1)=0;
-           A_new(i,1)=sedBudget(i,1)*rhoSurf/rhoWet/d_avg; %Equation 11 from Edmonds et al.--determine areal growth (m2)
+           A_new(i,1)=sedBudget(i,1)*rhoSurf/rhoWet/d_avg; %Equation 10 from Edmonds et al.--determine areal growth (m2/yr)
            A(i+1,1)=A(i,1)+A_new(i,1)*dt-A_ero(i,1)*dt; %next marsh area
         end
         
