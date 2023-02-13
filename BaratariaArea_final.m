@@ -36,7 +36,8 @@ A_new=zeros(length(t),1);
 nRecEff=numel(f_rec);
 A=zeros(length(t),nRecEff);
 shallowsubs=ones(size(eustatic)).*SS;
-%% calculate variables from input
+
+%%calculate variables from input
 TotMass=OrgMass+MinMass; %total organic + mineral depositional mass on Barataria, kg/km2/yr
 OrgFrac=OrgMass/TotMass; %fraction of depositional mass that is organic
 
